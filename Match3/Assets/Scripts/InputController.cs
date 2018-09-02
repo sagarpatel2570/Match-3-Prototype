@@ -132,16 +132,20 @@ public class InputController : MonoBehaviour {
 
     void Swap (Item a,Item b)
     {
-        Item tempItem = a;
-        a.grid.node.item = b;
-        b.grid.node.item = tempItem;
+        Grid aGrid = a.grid;
+        Grid bGrid = b.grid;
 
-        Grid tempGrid = a.grid;
-        a.grid = b.grid;
-        b.grid = tempGrid;
+        aGrid.node.item = b;
+        bGrid.node.item = a;
 
-        Transform tempParent = a.transform.parent;
-        a.transform.parent = b.transform.parent;
-        b.transform.parent = tempParent;
+        a.grid = bGrid;
+        b.grid = aGrid;
+
+        a.transform.parent = bGrid.transform;
+        b.transform.parent = aGrid.transform;
+
+        a.UpdateTargetPos();
+        b.UpdateTargetPos();
+       
     }
 }

@@ -10,13 +10,15 @@ public class Item : MonoBehaviour {
     public LayerMask itemLayerMask;
     public ItemState itemState;
     public Grid grid;
+    public Color[] colors;
 
     public float speed = 3;
+    public AnimationCurve curve;
 
     Map map;
     bool isMovingDiagonal;
-    Vector3 diagDir;
     Vector3 targetPos;
+    float T;
 
     private void OnEnable()
     {
@@ -29,41 +31,7 @@ public class Item : MonoBehaviour {
         {
             targetPos = grid.transform.position;
         }
-    }
-
-    void UpdateGrid (Vector3 position)
-    {
-        Vector3 dir = Vector3.down;
-        position += dir * (transform.localScale.x / 2 + 0.01f) ;
-
-        if (isMovingDiagonal)
-        {
-            position += diagDir * (transform.localScale.x / 2 + 0.01f);
-        }
-        if (itemState == ItemState.FALLING )
-        {
-            if (grid != null)
-            {
-                Vector3 test = position;
-                position = new Vector2(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y));
-               
-                if (map.nodeGridDictionary.ContainsKey(position))
-                {
-                    Grid g = map.nodeGridDictionary[position];
-                    if(g.node.item != null && g.node.item.type == ItemType.WALL)
-                    {
-                        Debug.LogError(test.x + " " + test.y + " " + position + " "  + transform.position);
-                        Debug.Break();
-                        return;
-                    }
-                    grid.node.item = null;
-                    grid = map.nodeGridDictionary[position];
-                }
-                grid.node.item = this;
-                targetPos = grid.transform.position;
-                transform.parent = grid.transform;
-            }
-        }
+        GetComponentInChildren<SpriteRenderer>().color = colors[Random.Range(0, colors.Length)];
     }
 
     public void Update()
@@ -72,16 +40,18 @@ public class Item : MonoBehaviour {
         {
             return;
         }
-
-        UpdateGrid(transform.position );
         
         if (itemState == ItemState.STABLE)
         {
-            if (MoveTowardsEmptyGrid())
-            {
-               // return;
-            }
+            T -= Time.deltaTime; 
+            MoveTowardsEmptyGrid();
         }
+        else
+        {
+            T += Time.deltaTime;
+        }
+
+        T = Mathf.Clamp(T,0.5f, 1);
         
 
         Vector3 raycastPos = transform.position;
@@ -95,32 +65,79 @@ public class Item : MonoBehaviour {
             if (i.itemState != ItemState.FALLING)
             {
                 Vector3 finalPos = hit.transform.position + Vector3.up;
-
-                grid = map.nodeGridDictionary[new Vector2(Mathf.FloorToInt(finalPos.x), Mathf.FloorToInt(finalPos.y))];
-                grid.node.item = this;
-                transform.parent = grid.transform;
-                float d = Vector3.Distance(grid.transform.position, transform.position);
-                float s = speed;
-                targetPos = grid.transform.position;
-                itemState = ItemState.FALLING;
+                Grid targetGrid = map.nodeGridDictionary[new Vector2(Mathf.FloorToInt(finalPos.x), Mathf.FloorToInt(finalPos.y))];
+                MoveTowardsGrid(targetGrid);
             }
         }
 
         if (hit.transform == null && !isMovingDiagonal)
         {
-            transform.position += Time.deltaTime * speed  * dir;
+            transform.position += Time.deltaTime * speed * curve.Evaluate(T) * dir;
             itemState = ItemState.FALLING;
         }
         else
         {
-
-            transform.position = Vector3.MoveTowards(transform.position, targetPos, Time.deltaTime * speed);
+            transform.position = Vector3.MoveTowards(transform.position, targetPos, Time.deltaTime * speed * curve.Evaluate(T));
         }
 
         if((transform.position - targetPos).sqrMagnitude <= 0.01f)
         {
             transform.position = targetPos;
             OnReachedGrid();
+        }
+        UpdateGrid(transform.position);
+    }
+
+    void UpdateGrid(Vector3 position)
+    {
+        if (isMovingDiagonal)
+        {
+            return;
+        }
+        if (itemState == ItemState.STABLE)
+        {
+            return;
+        }
+
+        Vector3 dir = Vector3.down;
+        position += dir * (transform.localScale.x / 2 + 0.01f);
+        position = new Vector2(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y));
+
+        if (map.nodeGridDictionary.ContainsKey(position))
+        {
+            Grid g = map.nodeGridDictionary[position];
+            if (g.node.item != null && g.node.item.type == ItemType.WALL)
+            {
+                Debug.Break();
+                return;
+            }
+            MoveTowardsGrid(g);
+        }
+    }
+
+    bool IsAllDownGridFilled(Grid downGrid)
+    {
+        if(downGrid == null)
+        {
+            return true;
+        }
+
+        Grid g = downGrid.downGrid;
+
+        if (g != null)
+        {
+            if (g.node.item != null)
+            {
+                return IsAllDownGridFilled(g);
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else
+        {
+            return true;
         }
     }
 
@@ -141,9 +158,10 @@ public class Item : MonoBehaviour {
             return false;
         }
 
-        //check for left or right grid weather it has wall item or not 
-        // if it has then check for its down tile if it is empty if so then we can move towards that tile 
-        // but make that that grid is marked as having some tile so that tile from other direction will not be able to move
+        if(!IsAllDownGridFilled(grid.downGrid))
+        {
+            return false;
+        }
 
         Grid rightGrid = grid.rightGrid;
         if (rightGrid != null)
@@ -155,27 +173,9 @@ public class Item : MonoBehaviour {
                 if (rightItem.type == ItemType.WALL)
                 {
                     Grid downGrid = rightGrid.downGrid;
-                    if (downGrid != null)
+                    if(MoveTowardsGrid(downGrid,true))
                     {
-                        Item downItem = downGrid.node.item;
-                        if (downItem == null )
-                        {
-                            float d = Vector3.Distance(downGrid.transform.position, transform.position);
-                           
-                            float s =  speed;
-                            targetPos = downGrid.transform.position;
-                            itemState = ItemState.FALLING;
-                            if (grid != null && grid.node.item != null)
-                            {
-                                grid.node.item = null;
-                            }
-                            grid = downGrid;
-                            downGrid.node.item = this;
-                            transform.parent = grid.transform;
-                            isMovingDiagonal = true;
-                            diagDir = Vector3.right;
-                            return true;
-                        }
+                        return true;
                     }
                 }
             }
@@ -189,27 +189,9 @@ public class Item : MonoBehaviour {
             if (leftItem != null && leftItem.type == ItemType.WALL)
             {
                 Grid downGrid = leftGrid.downGrid;
-                if (downGrid != null)
+                if (MoveTowardsGrid(downGrid,true))
                 {
-                    Item downItem = downGrid.node.item;
-                    if (downItem == null )
-                    {
-                        float d = Vector3.Distance(downGrid.transform.position, transform.position);
-                       
-                        float s = speed;
-                        targetPos = downGrid.transform.position;
-                        itemState = ItemState.FALLING;
-                        if (grid != null && grid.node.item != null)
-                        {
-                            grid.node.item = null;
-                        }
-                        grid = downGrid;
-                        downGrid.node.item = this;
-                        transform.parent = grid.transform;
-                        isMovingDiagonal = true;
-                        diagDir = Vector3.left;
-                        return true;
-                    }
+                    return true;
                 }
             }
         }
@@ -226,26 +208,9 @@ public class Item : MonoBehaviour {
                     if(rightItem == null)
                     {
                         Grid downGrid = rightGrid.downGrid;
-                        if(downGrid != null)
+                        if (MoveTowardsGrid(downGrid,true))
                         {
-                            if(downGrid.node.item == null)
-                            {
-                                float d = Vector3.Distance(downGrid.transform.position, transform.position);
-                                
-                                float s =  speed;
-                                targetPos = downGrid.transform.position;
-                                itemState = ItemState.FALLING;
-                                if (grid != null && grid.node.item != null)
-                                {
-                                    grid.node.item = null;
-                                }
-                                grid = downGrid;
-                                downGrid.node.item = this;
-                                transform.parent = grid.transform;
-                                isMovingDiagonal = true;
-                                diagDir = Vector3.right;
-                                return true;
-                            }
+                            return true;
                         }
                     }
                 }
@@ -255,26 +220,9 @@ public class Item : MonoBehaviour {
                     if (leftItem == null)
                     {
                         Grid downGrid = leftGrid.downGrid;
-                        if (downGrid != null)
+                        if (MoveTowardsGrid(downGrid,true))
                         {
-                            if (downGrid.node.item == null)
-                            {
-                                float d = Vector3.Distance(downGrid.transform.position, transform.position);
-                                
-                                float s =  speed;
-                                targetPos = downGrid.transform.position;
-                                itemState = ItemState.FALLING;
-                                if (grid != null && grid.node.item != null)
-                                {
-                                    grid.node.item = null;
-                                }
-                                grid = downGrid;
-                                downGrid.node.item = this;
-                                transform.parent = grid.transform;
-                                isMovingDiagonal = true;
-                                diagDir = Vector3.left;
-                                return true;
-                            }
+                            return true;
                         }
                     }
                 }
@@ -283,6 +231,30 @@ public class Item : MonoBehaviour {
         return false;
     }
 
+    bool MoveTowardsGrid (Grid g,bool isDiagnonal = false)
+    {
+        if (g != null)
+        {
+            Item i = g.node.item;
+            if (i == null)
+            {
+                if (grid != null && grid.node.item != null)
+                {
+                    grid.node.item = null;
+                }
+
+                targetPos = g.transform.position;
+                itemState = ItemState.FALLING;
+                
+                grid = g;
+                g.node.item = this;
+                transform.parent = grid.transform;
+                isMovingDiagonal = isDiagnonal;
+                return true;
+            }
+        }
+        return false;
+    }
 
     Item IsWallAvailableVertically (Grid g)
     {
@@ -310,14 +282,15 @@ public class Item : MonoBehaviour {
     {
         itemState = ItemState.STABLE;
         isMovingDiagonal = false;
-        if (!MoveTowardsEmptyGrid())
-        {
-        }
-        else
+        if (MoveTowardsEmptyGrid() || (grid.downGrid != null && grid.downGrid.node.item  == null))
         {
             itemState = ItemState.FALLING;
         }
-        
+    }
+
+    public void UpdateTargetPos()
+    {
+        targetPos = grid.transform.position;
     }
 }
 
