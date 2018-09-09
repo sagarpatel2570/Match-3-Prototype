@@ -1,0 +1,11 @@
+*.info
+Match3/Library/
+Match3/.vs/Match3/DesignTimeBuild/.dtbcache
+*.sln
+Match3/.vs/Match3/v15/Server/sqlite3/storage.ide-wal
+Match3/.vs/Match3/v15/Server/sqlite3/storage.ide-shm
+Match3/.vs/Match3/v15/Server/sqlite3/storage.ide
+Match3/.vs/Match3/v15/Server/sqlite3/db.lock
+Match3/Temp/UnityLockfile
+*.bakert
+Match3/Temp/__Backupscenes/0.backup
