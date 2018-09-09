@@ -6,14 +6,9 @@ using UnityEngine;
 [SelectionBase]
 public class Item : MonoBehaviour {
 
-    public ItemType type;
-    public LayerMask itemLayerMask;
     public ItemState itemState;
     public Grid grid;
-    public Color[] colors;
-
-    public float speed = 3;
-    public AnimationCurve curve;
+    public ItemData data;
 
     Map map;
     bool isMovingDiagonal;
@@ -31,7 +26,8 @@ public class Item : MonoBehaviour {
         {
             targetPos = grid.transform.position;
         }
-        GetComponentInChildren<SpriteRenderer>().color = colors[Random.Range(0, colors.Length)];
+        GetComponentInChildren<SpriteRenderer>().sprite = data.sprite;
+        
     }
 
     public void Update()
@@ -57,7 +53,7 @@ public class Item : MonoBehaviour {
         Vector3 raycastPos = transform.position;
         Vector3 dir = Vector3.down;
         raycastPos += dir * (transform.localScale.y/2f  + 0.5f);
-        RaycastHit2D hit = Physics2D.Raycast(raycastPos, Vector3.forward, 10, itemLayerMask);
+        RaycastHit2D hit = Physics2D.Raycast(raycastPos, Vector3.forward, 10, data.itemLayerMask);
         
         if (hit.transform != null && itemState == ItemState.FALLING && !isMovingDiagonal)
         {
@@ -72,20 +68,30 @@ public class Item : MonoBehaviour {
 
         if (hit.transform == null && !isMovingDiagonal)
         {
-            transform.position += Time.deltaTime * speed * curve.Evaluate(T) * dir;
+            transform.position += Time.deltaTime * data.speed * data.curve.Evaluate(T) * dir;
             itemState = ItemState.FALLING;
         }
         else
         {
-            transform.position = Vector3.MoveTowards(transform.position, targetPos, Time.deltaTime * speed * curve.Evaluate(T));
+            transform.position = Vector3.MoveTowards(transform.position, targetPos, Time.deltaTime * data.speed * data.curve.Evaluate(T));
         }
 
-        if((transform.position - targetPos).sqrMagnitude <= 0.01f)
+        if ((transform.position - targetPos).sqrMagnitude <= 0.01f)
         {
             transform.position = targetPos;
-            OnReachedGrid();
+            if (isMovingDiagonal)
+            {
+                OnReachedGrid();
+            }
+            else
+            {
+                if(hit.transform != null)
+                itemState = ItemState.STABLE;
+            }
         }
+
         UpdateGrid(transform.position);
+
     }
 
     void UpdateGrid(Vector3 position)
@@ -106,7 +112,7 @@ public class Item : MonoBehaviour {
         if (map.nodeGridDictionary.ContainsKey(position))
         {
             Grid g = map.nodeGridDictionary[position];
-            if (g.node.item != null && g.node.item.type == ItemType.WALL)
+            if (g.item != null && g.item.data.type == ItemType.WALL)
             {
                 Debug.Break();
                 return;
@@ -126,7 +132,7 @@ public class Item : MonoBehaviour {
 
         if (g != null)
         {
-            if (g.node.item != null)
+            if (g.item != null && g.item.itemState == ItemState.STABLE)
             {
                 return IsAllDownGridFilled(g);
             }
@@ -153,7 +159,7 @@ public class Item : MonoBehaviour {
             return false;
         }
 
-        if(grid.downGrid != null && grid.downGrid.node.item == null)
+        if(grid.downGrid != null && grid.downGrid.item == null)
         {
             return false;
         }
@@ -166,11 +172,11 @@ public class Item : MonoBehaviour {
         Grid rightGrid = grid.rightGrid;
         if (rightGrid != null)
         {
-            Item rightItem = rightGrid.node.item;
+            Item rightItem = rightGrid.item;
 
             if (rightItem != null)
             {
-                if (rightItem.type == ItemType.WALL)
+                if (rightItem.data.type == ItemType.WALL)
                 {
                     Grid downGrid = rightGrid.downGrid;
                     if(MoveTowardsGrid(downGrid,true))
@@ -184,9 +190,9 @@ public class Item : MonoBehaviour {
         Grid leftGrid = grid.leftGrid;
         if (leftGrid != null)
         {
-            Item leftItem = leftGrid.node.item;
+            Item leftItem = leftGrid.item;
 
-            if (leftItem != null && leftItem.type == ItemType.WALL)
+            if (leftItem != null && leftItem.data.type == ItemType.WALL)
             {
                 Grid downGrid = leftGrid.downGrid;
                 if (MoveTowardsGrid(downGrid,true))
@@ -200,11 +206,11 @@ public class Item : MonoBehaviour {
         if (upGrid != null)
         {
             Item upItem = IsWallAvailableVertically(upGrid);
-            if(upItem != null && upItem.type == ItemType.WALL)
+            if(upItem != null && upItem.data.type == ItemType.WALL)
             {
                 if(rightGrid != null)
                 {
-                    Item rightItem = rightGrid.node.item;
+                    Item rightItem = rightGrid.item;
                     if(rightItem == null)
                     {
                         Grid downGrid = rightGrid.downGrid;
@@ -216,7 +222,7 @@ public class Item : MonoBehaviour {
                 }
                 if (leftGrid != null)
                 {
-                    Item leftItem = leftGrid.node.item;
+                    Item leftItem = leftGrid.item;
                     if (leftItem == null)
                     {
                         Grid downGrid = leftGrid.downGrid;
@@ -235,19 +241,19 @@ public class Item : MonoBehaviour {
     {
         if (g != null)
         {
-            Item i = g.node.item;
+            Item i = g.item;
             if (i == null)
             {
-                if (grid != null && grid.node.item != null)
+                if (grid != null && grid.item != null)
                 {
-                    grid.node.item = null;
+                    grid.item = null;
                 }
 
                 targetPos = g.transform.position;
                 itemState = ItemState.FALLING;
                 
                 grid = g;
-                g.node.item = this;
+                g.item = this;
                 transform.parent = grid.transform;
                 isMovingDiagonal = isDiagnonal;
                 return true;
@@ -263,11 +269,11 @@ public class Item : MonoBehaviour {
             return null;
         }
 
-        if (g.node.item != null)
+        if (g.item != null)
         {
-            if (g.node.item.type == ItemType.WALL)
+            if (g.item.data.type == ItemType.WALL)
             {
-                return g.node.item;
+                return g.item;
             }
             else
             {
@@ -282,7 +288,7 @@ public class Item : MonoBehaviour {
     {
         itemState = ItemState.STABLE;
         isMovingDiagonal = false;
-        if (MoveTowardsEmptyGrid() || (grid.downGrid != null && grid.downGrid.node.item  == null))
+        if (MoveTowardsEmptyGrid() || (grid.downGrid != null && grid.downGrid.item  == null))
         {
             itemState = ItemState.FALLING;
         }
@@ -297,12 +303,14 @@ public class Item : MonoBehaviour {
 public enum ItemType
 {
     CHAIR,
-    WALL
+    WALL,
+    SOFA,
+    DOOR,
+    FRUIT
 }
 
 public enum ItemState
 {
-    REACHING,
     FALLING,
     STABLE
 }

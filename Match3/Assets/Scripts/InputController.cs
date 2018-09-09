@@ -115,7 +115,7 @@ public class InputController : MonoBehaviour {
         {
             return;
         }
-        Item adjacentItem = targetGrid.node.item;
+        Item adjacentItem = targetGrid.item;
         if(adjacentItem == null)
         {
             return;
@@ -123,8 +123,13 @@ public class InputController : MonoBehaviour {
 
         canDrag = false;
 
-        item.transform.DOMove(adjacentItem.transform.position, 0.5f);
-        adjacentItem.transform.DOMove(item.transform.position, 0.5f).OnComplete(()=> { canDrag = true; });
+        item.transform.DOMove(adjacentItem.transform.position, 0.2f);
+        adjacentItem.transform.DOMove(item.transform.position, 0.2f).OnComplete(()=> { canDrag = true;
+
+            item.itemState = ItemState.STABLE;
+            adjacentItem.itemState = ItemState.STABLE;
+
+        });
 
         Swap(item, adjacentItem);
 
@@ -132,11 +137,14 @@ public class InputController : MonoBehaviour {
 
     void Swap (Item a,Item b)
     {
+        a.itemState = ItemState.FALLING;
+        b.itemState = ItemState.FALLING;
+
         Grid aGrid = a.grid;
         Grid bGrid = b.grid;
 
-        aGrid.node.item = b;
-        bGrid.node.item = a;
+        aGrid.item = b;
+        bGrid.item = a;
 
         a.grid = bGrid;
         b.grid = aGrid;

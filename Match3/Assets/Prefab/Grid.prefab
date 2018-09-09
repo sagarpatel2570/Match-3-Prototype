@@ -52,11 +52,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d69fdbba6e8f45c429d4b64354e72a1c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  node:
-    x: 0
-    y: 0
-    position: {x: 0, y: 0, z: 0}
-    item: {fileID: 0}
+  x: 0
+  y: 0
+  item: {fileID: 0}
+  leftGrid: {fileID: 0}
+  rightGrid: {fileID: 0}
+  upGrid: {fileID: 0}
+  downGrid: {fileID: 0}
 --- !u!212 &212060434527346864
 SpriteRenderer:
   m_ObjectHideFlags: 1
@@ -93,7 +95,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_Sprite: {fileID: 21300000, guid: 6db9efb267f8722438edc9ee13726a58, type: 3}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.6627451}
+  m_Color: {r: 0.7411765, g: 1, b: 0.8862745, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0

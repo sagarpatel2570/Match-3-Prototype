@@ -107,18 +107,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f9561d11fe2b8f64a864079b158b68cf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  type: 0
-  itemLayerMask:
-    serializedVersion: 2
-    m_Bits: 512
   itemState: 2
   grid: {fileID: 0}
-  colors:
-  - {r: 1, g: 0, b: 0, a: 1}
-  - {r: 0.11035967, g: 1, b: 0, a: 1}
-  - {r: 0, g: 0.1493411, b: 1, a: 1}
-  - {r: 1, g: 0.9584457, b: 0, a: 1}
-  speed: 10
+  data: {fileID: 11400000, guid: 7b88a92bd09222747874c7e40545b492, type: 2}
 --- !u!212 &212994937530892784
 SpriteRenderer:
   m_ObjectHideFlags: 1
@@ -155,7 +146,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 1
   m_Sprite: {fileID: 21300000, guid: da92b5cf99a048c48bf2ac49c85c7757, type: 3}
-  m_Color: {r: 0.6037736, g: 0.41532934, b: 0, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0

@@ -8,7 +8,7 @@ public class Map : MonoBehaviour {
     public int height;
 
     public Grid gridPrefab;
-    public Item chairPrefab;
+    public Item[] itemPrefabs;
     public Item wallPrefab;
 
     public Dictionary<Vector2, Grid> nodeGridDictionary = new Dictionary<Vector2, Grid>();
@@ -28,10 +28,10 @@ public class Map : MonoBehaviour {
         {
             for (int x = -width; x < width; x++)
             {
-                Node node = new Node(x, y);
-                Grid grid = Instantiate(gridPrefab, node.position, Quaternion.identity) as Grid;
+                Vector3 position = new Vector3(x + 0.5f, y + 0.5f, 0);
+                Grid grid = Instantiate(gridPrefab, position, Quaternion.identity) as Grid;
                 grid.name = "Grid_" + x + "_" + y;
-                grid.node = node;
+                grid.Init(x, y);
                 grid.transform.parent = this.transform;
                 Item itemPrefab = null;
                 if (x == -5 && y == 0)
@@ -51,12 +51,14 @@ public class Map : MonoBehaviour {
                 }
                 else
                 {
-                    itemPrefab = chairPrefab;
+                    int randomIndex = Random.Range(0, itemPrefabs.Length);
+                    itemPrefab = itemPrefabs[randomIndex];
                 }
-                Item item = Instantiate(itemPrefab, node.position, Quaternion.identity) as Item;
+                
+                Item item = Instantiate(itemPrefab, grid.transform.position, Quaternion.identity) as Item;
                 item.transform.parent = grid.transform;
                 item.grid = grid;
-                node.item = item;
+                grid.item = item;
 
                 nodeGridDictionary.Add(new Vector2(x, y), grid);
             }

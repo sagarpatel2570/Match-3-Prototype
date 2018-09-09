@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class ItemSpawner : MonoBehaviour {
 
-    public Item chairPrefab;
+    public Item[] itemPrefabs;
     public LayerMask itemLayerMask;
 
 	void Start () {
@@ -18,7 +18,8 @@ public class ItemSpawner : MonoBehaviour {
         Debug.DrawLine(transform.position, hit.point, Color.red);
         if (hit.transform == null)
         {
-            Item chair = Instantiate(chairPrefab, transform.position, Quaternion.identity) as Item;
+            int randomIndex = Random.Range(0, itemPrefabs.Length);
+            Item item = Instantiate(itemPrefabs[randomIndex], transform.position, Quaternion.identity) as Item;
         }
     }
 }
